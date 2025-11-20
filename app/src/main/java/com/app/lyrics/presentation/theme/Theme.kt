@@ -1,4 +1,4 @@
-package com.app.lyrics.ui.theme
+package com.app.lyrics.presentation.theme
 
 import android.app.Activity
 import android.os.Build
