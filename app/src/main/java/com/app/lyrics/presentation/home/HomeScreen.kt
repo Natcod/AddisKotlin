@@ -20,7 +20,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel(),
-    onSongClick: (String) -> Unit
+    onSongClick: (String) -> Unit,
+    onFavoritesClick: () -> Unit
 ) {
     val query by viewModel.searchQuery.collectAsState()
     val results by viewModel.searchResults.collectAsState()
@@ -29,7 +30,12 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Amharic Lyrics") }
+                title = { Text("Amharic Lyrics") },
+                actions = {
+                    IconButton(onClick = { onFavoritesClick() }) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Favorites")
+                    }
+                }
             )
         }
     ) { padding ->

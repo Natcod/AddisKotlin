@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.app.lyrics.presentation.home.HomeScreen
 import com.app.lyrics.presentation.details.LyricsDetailScreen
+import com.app.lyrics.presentation.favorites.FavoritesScreen
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -17,6 +18,9 @@ fun NavGraph(navController: NavHostController) {
             HomeScreen(
                 onSongClick = { songId ->
                     navController.navigate(Screen.Details.createRoute(songId))
+                },
+                onFavoritesClick = {
+                    navController.navigate(Screen.Favorites.route)
                 }
             )
         }
@@ -30,7 +34,11 @@ fun NavGraph(navController: NavHostController) {
             }
         }
         composable(Screen.Favorites.route) {
-            // TODO: Implement Favorites Screen
+            FavoritesScreen(
+                onSongClick = { songId ->
+                    navController.navigate(Screen.Details.createRoute(songId))
+                }
+            )
         }
     }
 }
