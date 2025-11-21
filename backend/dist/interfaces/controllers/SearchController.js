@@ -10,7 +10,9 @@ class SearchController {
                 if (!query) {
                     return res.status(400).json({ error: 'Query parameter "q" is required' });
                 }
+                console.log(`Searching for: ${query}`);
                 const results = await this.searchSongsUseCase.execute(query);
+                console.log(`Found ${results.length} results for: ${query}`);
                 res.json(results);
             }
             catch (error) {

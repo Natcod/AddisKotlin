@@ -12,6 +12,11 @@ const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+// Request Logging Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
 app.use('/api/search', searchRoutes_1.default);
 app.get('/', (req, res) => {
     res.send('Addis Lyrics Backend is Running');

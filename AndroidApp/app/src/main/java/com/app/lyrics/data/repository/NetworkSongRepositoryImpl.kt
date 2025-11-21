@@ -23,18 +23,21 @@ class NetworkSongRepositoryImpl(
     private val baseUrl = "http://10.0.2.2:3000/api"
 
     override suspend fun searchSongs(query: String): List<Song> {
+        android.util.Log.d("LyricsApp", "Searching for: $query at $baseUrl/search")
         return try {
             val response: List<SongDto> = client.get("$baseUrl/search") {
                 parameter("q", query)
             }.body()
 
+            android.util.Log.d("LyricsApp", "Search success. Found ${response.size} items")
+
             // Check if songs are in favorites
-            // This is not efficient for large lists, but fine for V1
             response.map { dto ->
                 val isFavorite = dao.getSongById(dto.id) != null
                 dto.toDomain(isFavorite)
             }
         } catch (e: Exception) {
+            android.util.Log.e("LyricsApp", "Search failed", e)
             e.printStackTrace()
             emptyList()
         }

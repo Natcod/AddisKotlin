@@ -38,6 +38,11 @@ val appModule = module {
                 })
             }
             install(Logging) {
+                logger = object : io.ktor.client.plugins.logging.Logger {
+                    override fun log(message: String) {
+                        android.util.Log.d("Ktor", message)
+                    }
+                }
                 level = LogLevel.ALL
             }
         }

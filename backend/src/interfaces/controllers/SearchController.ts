@@ -8,13 +8,16 @@ export class SearchController {
         try {
             const query = req.query.q as string;
             if (!query) {
+                console.log('Search query missing');
                 return res.status(400).json({ error: 'Query parameter "q" is required' });
             }
 
+            console.log(`Processing search for: "${query}"`);
             const results = await this.searchSongsUseCase.execute(query);
+            console.log(`Found ${results.length} results for: "${query}"`);
             res.json(results);
         } catch (error) {
-            console.error(error);
+            console.error('Error in SearchController:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     }
