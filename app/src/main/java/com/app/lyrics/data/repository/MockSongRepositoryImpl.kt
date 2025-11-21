@@ -12,9 +12,9 @@ class MockSongRepositoryImpl : SongRepository {
     private val mockSongs = listOf(
         Song(
             id = "1",
-            title = "Tirhas",
+            title = "Eyesus libel eyesus",
             artist = "Yared Yifru",
-            lyrics = "Sample Amharic Lyrics for Tirhas...",
+            lyrics = "Sample Amharic Lyrics for Eyesus libel eyesus...",
             category = "Mezmur"
         ),
         Song(
