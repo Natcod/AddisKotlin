@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.app.lyrics.presentation.home.HomeScreen
+import com.app.lyrics.presentation.details.LyricsDetailScreen
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -21,7 +22,12 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Screen.Details.route) { backStackEntry ->
             val songId = backStackEntry.arguments?.getString("songId")
-            // TODO: Implement Details Screen
+            if (songId != null) {
+                LyricsDetailScreen(
+                    songId = songId,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
         }
         composable(Screen.Favorites.route) {
             // TODO: Implement Favorites Screen
