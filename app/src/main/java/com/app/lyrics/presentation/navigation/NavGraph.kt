@@ -37,6 +37,9 @@ fun NavGraph(navController: NavHostController) {
             FavoritesScreen(
                 onSongClick = { songId ->
                     navController.navigate(Screen.Details.createRoute(songId))
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

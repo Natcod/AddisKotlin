@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -21,14 +25,20 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun FavoritesScreen(
     viewModel: FavoritesViewModel = koinViewModel(),
-    onSongClick: (String) -> Unit
+    onSongClick: (String) -> Unit,
+    onBackClick: () -> Unit
 ) {
     val favorites by viewModel.favoriteSongs.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Favorites") }
+                title = { Text("Favorites") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { padding ->
