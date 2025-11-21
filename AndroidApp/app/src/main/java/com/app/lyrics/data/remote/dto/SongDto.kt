@@ -18,6 +18,7 @@ data class SongDto(
             title = title,
             artist = artist,
             lyrics = lyrics,
+            category = category,
             isFavorite = isFavorite
         )
     }

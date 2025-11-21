@@ -2,6 +2,8 @@ package com.app.lyrics.data.repository
 
 import com.app.lyrics.data.local.dao.SongDao
 import com.app.lyrics.data.local.entity.SongEntity
+import com.app.lyrics.data.local.entity.toDomain
+import com.app.lyrics.data.local.entity.toEntity
 import com.app.lyrics.data.remote.dto.SongDto
 import com.app.lyrics.domain.model.Song
 import com.app.lyrics.domain.repository.SongRepository
@@ -66,7 +68,7 @@ class NetworkSongRepositoryImpl(
         if (existing != null) {
             dao.deleteSong(existing)
         } else {
-            dao.insertSong(SongEntity.fromDomain(song))
+            dao.insertSong(song.toEntity())
         }
     }
 
