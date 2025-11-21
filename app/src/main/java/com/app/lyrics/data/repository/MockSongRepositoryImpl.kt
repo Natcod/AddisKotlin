@@ -2,19 +2,22 @@ package com.app.lyrics.data.repository
 
 import com.app.lyrics.domain.model.Song
 import com.app.lyrics.domain.repository.SongRepository
+import com.app.lyrics.data.local.entity.toDomain
+import com.app.lyrics.data.local.entity.toEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
-class MockSongRepositoryImpl : SongRepository {
+class MockSongRepositoryImpl(
+    private val dao: com.app.lyrics.data.local.dao.SongDao
+) : SongRepository {
 
     private val mockSongs = listOf(
         Song(
             id = "1",
-            title = "Eyesus libel eyesus",
+            title = "Tirhas",
             artist = "Yared Yifru",
-            lyrics = "Sample Amharic Lyrics for Eyesus libel eyesus...",
+            lyrics = "Sample Amharic Lyrics for Tirhas...",
             category = "Mezmur"
         ),
         Song(
@@ -33,7 +36,6 @@ class MockSongRepositoryImpl : SongRepository {
         )
     )
 
-    private val favoriteSongs = MutableStateFlow<Set<String>>(emptySet())
     private val recentSearches = mutableListOf<String>()
 
     override suspend fun searchSongs(query: String): List<Song> {
@@ -47,23 +49,31 @@ class MockSongRepositoryImpl : SongRepository {
 
     override suspend fun getSongDetails(songId: String): Song {
         delay(300)
+        val localSong = dao.getSongById(songId)
+        if (localSong != null) {
+            return localSong.toDomain()
+        }
         return mockSongs.find { it.id == songId } ?: throw Exception("Song not found")
     }
 
     override fun getFavoriteSongs(): Flow<List<Song>> {
-        return favoriteSongs.map { ids ->
-            mockSongs.filter { ids.contains(it.id) }
+        return dao.getFavoriteSongs().map { entities ->
+            entities.map { it.toDomain() }
         }
     }
 
     override suspend fun toggleFavorite(song: Song) {
-        val current = favoriteSongs.value.toMutableSet()
-        if (current.contains(song.id)) {
-            current.remove(song.id)
+        val isFav = !song.isFavorite
+        if (isFav) {
+            dao.insertSong(song.copy(isFavorite = true).toEntity())
         } else {
-            current.add(song.id)
+            dao.updateFavoriteStatus(song.id, false)
+            dao.deleteSong(song.toEntity()) // Or just update status, but delete is cleaner for "Favorites only" table if we had one. 
+            // But here we are using a single table for everything? 
+            // Wait, my DAO logic: insertSong replaces. updateFavoriteStatus updates.
+            // If I want to keep the song in DB but just un-favorite it:
+            dao.updateFavoriteStatus(song.id, false)
         }
-        favoriteSongs.value = current
     }
 
     override suspend fun getRecentSearches(): List<String> {
