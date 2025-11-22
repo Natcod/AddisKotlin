@@ -4,26 +4,57 @@ import { IScraperService } from '../../domain/interfaces/IScraperService';
 import { SearchResult } from '../../domain/models/SearchResult';
 
 export class PuppeteerScraperService implements IScraperService {
-    async search(query: string): Promise<SearchResult[]> {
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--window-size=1920,1080'
-            ],
-            ignoreDefaultArgs: ['--enable-automation']
-        });
-        const page = await browser.newPage();
+    private browser: any = null;
 
+    private async getBrowser() {
+        if (!this.browser) {
+            this.browser = await puppeteer.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage', // Critical for Docker memory limits
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-blink-features=AutomationControlled',
+                    '--window-size=1920,1080'
+                ],
+                ignoreDefaultArgs: ['--enable-automation']
+            });
+
+            // Handle browser disconnect/crash
+            this.browser.on('disconnected', () => {
+                console.log('Browser disconnected, resetting instance');
+                this.browser = null;
+            });
+        }
+        return this.browser;
+    }
+
+    async search(query: string): Promise<SearchResult[]> {
+        let page = null;
         try {
+            const browser = await this.getBrowser();
+            page = await browser.newPage();
+
+            // Block images and fonts to save memory and bandwidth
+            await page.setRequestInterception(true);
+            page.on('request', (req: any) => {
+                if (['image', 'stylesheet', 'font'].includes(req.resourceType())) {
+                    req.abort();
+                } else {
+                    req.continue();
+                }
+            });
+
             // Switch to DuckDuckGo HTML version (No JS, easier to scrape, less blocking)
             // Remove strict site: operators to get more results, then filter manually
             const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query + ' lyrics')}`;
 
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+            await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
             const title = await page.title();
             console.log(`Page Title: ${title}`);
@@ -66,7 +97,7 @@ export class PuppeteerScraperService implements IScraperService {
                     else if (link.includes('youtube.com') || link.includes('youtu.be')) source = 'YouTube';
 
                     // Optional: Strict filter
-                    // if (source === 'Web') return; 
+                    // if (source === 'Web') return;
 
                     results.push({
                         id: link,
@@ -87,7 +118,7 @@ export class PuppeteerScraperService implements IScraperService {
                     // Use mbasic.facebook.com for easier scraping
                     const mbasicUrl = result.id.replace('www.facebook.com', 'mbasic.facebook.com').replace('web.facebook.com', 'mbasic.facebook.com');
 
-                    await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded' });
+                    await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
                     // Try to find the post content
                     // In mbasic, the post content is usually inside a div with specific structure or just the largest text block
@@ -117,12 +148,12 @@ export class PuppeteerScraperService implements IScraperService {
 
             for (const result of youtubeResults) {
                 try {
-                    await page.goto(result.id, { waitUntil: 'domcontentloaded' });
+                    await page.goto(result.id, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
                     // Wait for description selector
                     // Try to get description from meta tag first (faster, less brittle)
                     try {
-                        const metaDescription = await page.$eval('meta[name="description"]', el => el.getAttribute('content'));
+                        const metaDescription = await page.$eval('meta[name="description"]', (el: any) => el.getAttribute('content'));
                         if (metaDescription && metaDescription.length > result.lyrics.length) {
                             result.lyrics = metaDescription;
                             console.log(`Extracted YouTube description from meta tag for ${result.id}`);
@@ -140,7 +171,7 @@ export class PuppeteerScraperService implements IScraperService {
                             await new Promise(r => setTimeout(r, 500));
                         }
 
-                        const description = await page.$eval('#description-inline-expander', el => el.textContent);
+                        const description = await page.$eval('#description-inline-expander', (el: any) => el.textContent);
                         if (description && description.length > result.lyrics.length) {
                             result.lyrics = description.trim();
                         }
@@ -158,7 +189,10 @@ export class PuppeteerScraperService implements IScraperService {
             console.error("Scraping Error:", error);
             throw error;
         } finally {
-            await browser.close();
+            if (page) {
+                await page.close();
+            }
+            // Do NOT close the browser here, keep it alive for next request
         }
     }
 }
