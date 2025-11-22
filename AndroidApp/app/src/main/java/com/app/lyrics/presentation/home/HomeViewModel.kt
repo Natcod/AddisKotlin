@@ -36,6 +36,7 @@ class HomeViewModel(
                 try {
                     _searchResults.value = repository.searchSongs(query)
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     // Handle error
                 } finally {
                     _isLoading.value = false

@@ -37,6 +37,7 @@ class NetworkSongRepositoryImpl(
                 dto.toDomain(isFavorite)
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("LyricsApp", "Search failed", e)
             e.printStackTrace()
             emptyList()
@@ -44,7 +45,8 @@ class NetworkSongRepositoryImpl(
     }
 
     override suspend fun getSongDetails(songId: String): Song {
-        // For now, we don't have a specific details endpoint, 
+        // For now, we don't have a specific details endpoint,
+
         // we assume we have the data or we could fetch it again.
         // But since our search returns full lyrics, we might not need this if we pass data around.
         // However, to stick to the interface, we check local first, then maybe fail or re-search.
