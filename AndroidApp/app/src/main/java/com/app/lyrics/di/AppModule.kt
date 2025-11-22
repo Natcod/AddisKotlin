@@ -45,6 +45,11 @@ val appModule = module {
                 }
                 level = LogLevel.ALL
             }
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 60000
+                connectTimeoutMillis = 60000
+                socketTimeoutMillis = 60000
+            }
         }
     }
 

@@ -20,7 +20,7 @@ class NetworkSongRepositoryImpl(
 ) : SongRepository {
 
     // Use 10.0.2.2 for Android Emulator to access localhost
-    private val baseUrl = "http://10.0.2.2:3000/api"
+    private val baseUrl = "https://lyrics-app-backend-x5o3.onrender.com/api"
 
     override suspend fun searchSongs(query: String): List<Song> {
         android.util.Log.d("LyricsApp", "Searching for: $query at $baseUrl/search")
