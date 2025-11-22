@@ -12,30 +12,60 @@ export class PuppeteerScraperService implements IScraperService {
         const page = await browser.newPage();
 
         try {
-            // Construct Google Search Query
-            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query + ' "lyrics" site:facebook.com OR site:youtube.com')}`;
+            // Switch to DuckDuckGo HTML version (No JS, easier to scrape, less blocking)
+            // Remove strict site: operators to get more results, then filter manually
+            const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query + ' lyrics')}`;
 
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-            await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await page.goto(searchUrl, { waitUntil: 'networkidle2' });
 
             const content = await page.content();
+            console.log(`Page content length: ${content.length}`);
             const $ = cheerio.load(content);
             const results: SearchResult[] = [];
 
-            // Parse Google Search Results
-            $('.g').each((i, element) => {
-                const title = $(element).find('h3').text();
-                const link = $(element).find('a').attr('href');
-                const snippet = $(element).find('.VwiC3b').text();
+            const elements = $('.result');
+            console.log(`Found ${elements.length} DuckDuckGo results`);
+
+            // Parse DuckDuckGo Results
+            elements.each((i, element) => {
+                const titleElement = $(element).find('.result__title a');
+                const title = titleElement.text().trim();
+                let link = titleElement.attr('href');
+                const snippet = $(element).find('.result__snippet').text().trim();
+
+                console.log(`Parsed item ${i}: Title="${title}", Link="${link}"`);
 
                 if (title && link) {
+                    // Handle DuckDuckGo redirect links
+                    if (link.includes('duckduckgo.com/l/') || link.startsWith('//duckduckgo.com/l/')) {
+                        try {
+                            const urlObj = new URL('https:' + link);
+                            const uddg = urlObj.searchParams.get('uddg');
+                            if (uddg) {
+                                link = decodeURIComponent(uddg);
+                                console.log(`Decoded link: ${link}`);
+                            }
+                        } catch (e) {
+                            console.log('Failed to decode DDG link', e);
+                        }
+                    }
+
+                    // Filter: Only accept Facebook or YouTube links for now (or allow others as "Web" source)
+                    let source: 'Facebook' | 'YouTube' | 'Web' = 'Web';
+                    if (link.includes('facebook.com')) source = 'Facebook';
+                    else if (link.includes('youtube.com') || link.includes('youtu.be')) source = 'YouTube';
+
+                    // Optional: Strict filter
+                    // if (source === 'Web') return; 
+
                     results.push({
                         id: link,
                         title: title,
                         artist: "Unknown",
                         lyrics: snippet,
                         category: "Mezmur",
-                        source: link.includes('facebook.com') ? 'Facebook' : 'YouTube'
+                        source: source as any // Cast to match interface or update interface
                     });
                 }
             });
@@ -80,25 +110,33 @@ export class PuppeteerScraperService implements IScraperService {
                 try {
                     await page.goto(result.id, { waitUntil: 'domcontentloaded' });
 
-                    // Wait for description selector (this is tricky on YouTube as it's heavy JS)
-                    // We might need to click "more" to see full description
-                    // Selector for "more" button: #expand
+                    // Wait for description selector
+                    // Try to get description from meta tag first (faster, less brittle)
+                    try {
+                        const metaDescription = await page.$eval('meta[name="description"]', el => el.getAttribute('content'));
+                        if (metaDescription && metaDescription.length > result.lyrics.length) {
+                            result.lyrics = metaDescription;
+                            console.log(`Extracted YouTube description from meta tag for ${result.id}`);
+                            continue; // Skip complex DOM scraping if meta worked
+                        }
+                    } catch (e) {
+                        console.log('Meta description not found');
+                    }
+
+                    // Fallback to DOM scraping
                     try {
                         const moreButton = await page.$('#expand');
                         if (moreButton) {
                             await moreButton.click();
-                            // Wait a bit for expansion
                             await new Promise(r => setTimeout(r, 500));
                         }
+
+                        const description = await page.$eval('#description-inline-expander', el => el.textContent);
+                        if (description && description.length > result.lyrics.length) {
+                            result.lyrics = description.trim();
+                        }
                     } catch (e) {
-                        // Ignore if button not found
-                    }
-
-                    // Selector for description: #description-inline-expander or #description
-                    const description = await page.$eval('#description-inline-expander', el => el.textContent);
-
-                    if (description && description.length > result.lyrics.length) {
-                        result.lyrics = description.trim();
+                        console.log('DOM description not found');
                     }
                 } catch (err) {
                     console.error(`Failed to scrape YouTube video: ${result.id}`, err);
