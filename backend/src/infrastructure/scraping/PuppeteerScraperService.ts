@@ -7,7 +7,13 @@ export class PuppeteerScraperService implements IScraperService {
     async search(query: string): Promise<SearchResult[]> {
         const browser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--window-size=1920,1080'
+            ],
+            ignoreDefaultArgs: ['--enable-automation']
         });
         const page = await browser.newPage();
 
@@ -18,6 +24,9 @@ export class PuppeteerScraperService implements IScraperService {
 
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+
+            const title = await page.title();
+            console.log(`Page Title: ${title}`);
 
             const content = await page.content();
             console.log(`Page content length: ${content.length}`);
